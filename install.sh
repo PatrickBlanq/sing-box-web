@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 配置部分
-REPO="your-username/sing-box-web" # 你的 GitHub 仓库
+REPO="PatrickBlanq/sing-box-web" # 你的 GitHub 仓库
 BINARY_NAME="sing-box-web"
 INSTALL_DIR="/usr/local/bin"
 
