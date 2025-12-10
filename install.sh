@@ -110,7 +110,7 @@ if [ ! -f "$INSTALL_DIR/sb/sing-box-web.service" ]; then
     exit 1
 fi
 
-cp "$INSTALL_DIR/sb-web/sing-box-web.service" /etc/systemd/system/$SERVICE_NAME.service
+cp "$INSTALL_DIR/web/sing-box-web.service" /etc/systemd/system/$SERVICE_NAME.service
 systemctl daemon-reload
 systemctl enable $SERVICE_NAME
 systemctl restart $SERVICE_NAME
