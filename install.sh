@@ -105,7 +105,7 @@ rm -rf sing-box.tar.gz sing-box-*
 # 5. 配置 Systemd 服务
 echo -e "${YELLOW}[5/5] 配置系统服务...${NC}"
 # 确保 service 文件存在
-if [ ! -f "$INSTALL_DIR/sing-box-web.service" ]; then
+if [ ! -f "$INSTALL_DIR/sing-box/sing-box-web.service" ]; then
     echo -e "${RED}错误：仓库中缺少 sing-box-web.service 文件！${NC}"
     exit 1
 fi
