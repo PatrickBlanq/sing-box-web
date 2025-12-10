@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os, json, base64, re, shlex, subprocess, urllib.request, urllib.parse
 import yaml
-import socket, time, re
+import socket, psutil ,time, re
 from flask import Flask, request, jsonify, render_template
 
 # ====== 配置（可用 systemd Environment 覆盖） ======
@@ -35,6 +35,46 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 def ok(msg="", **kw): d={"ok":True,"msg":msg}; d.update(kw); return jsonify(d)
 def err(msg="", **kw): d={"ok":False,"msg":msg}; d.update(kw); return jsonify(d), 400
 def authed(): return TOKEN and request.headers.get("X-Token","")==TOKEN
+
+def get_default_interface():
+    # 获取所有网卡信息
+    stats = psutil.net_if_stats()
+    # 排除 lo (回环) 和 docker 等虚拟网卡
+    # 简单粗暴的策略：找一个状态是 UP 且不是 lo 的网卡
+    # 更好的策略：查询默认路由走的网卡
+    
+    # 方案 A: 使用 psutil 简单查找
+    for interface, stat in stats.items():
+        if interface != 'lo' and stat.isup:
+            return interface
+            
+    # 方案 B (更准): 通过连接外网来确定出口网卡
+    # 这是一个比较通用的 hack 方法
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        # 根据 IP 反查网卡名
+        addrs = psutil.net_if_addrs()
+        for interface, snics in addrs.items():
+            for snic in snics:
+                if snic.address == ip:
+                    return interface
+    except:
+        pass
+        
+    return "eth0" # 实在找不到就回退到 eth0
+
+default_iface = get_default_interface() # 获取到 ens33
+
+# 修改 config 字典
+outbound_config = {
+    "type": "direct",
+    "tag": "direct",
+    "bind_interface": default_iface  # <--- 这里使用变量
+}
+
 
 def run(cmd:str, timeout=60):
     try:
