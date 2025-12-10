@@ -5,13 +5,14 @@ Wants=network-online.target
 
 [Service]
 User=root
+WorkingDirectory=/opt/sing-box-web
 Environment=SB_WEB_HOST=0.0.0.0
 Environment=SB_WEB_PORT=8088
 Environment=SB_WEB_TOKEN=changeme
 Environment=SB_START=/opt/sing-box-web/sb/sb-start.sh
 Environment=SB_STOP=/opt/sing-box-web/sb/sb-stop.sh
 Environment=SB_SERVICE=sing-box
-ExecStart=/usr/bin/python3  /opt/sing-box-web/web/sb-web.py
+ExecStart=/usr/bin/python3 /opt/sing-box-web/sb-web.py
 Restart=always
 
 [Install]
