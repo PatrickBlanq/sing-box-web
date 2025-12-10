@@ -3,7 +3,8 @@
 # --- 配置 ---
 GITHUB_URL="https://github.com"
 REPO_PATH="PatrickBlanq/sing-box-web"
-INSTALL_DIR="/opt/sing-box-web"  # 也是运行目录
+# 必须和 service 文件里的路径一致
+INSTALL_DIR="/opt/sing-box-web"
 SERVICE_NAME="sing-box-web"
 
 # 颜色
@@ -12,7 +13,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
-echo -e "${GREEN}=== 开始部署 Sing-box Web (极简版) ===${NC}"
+echo -e "${GREEN}=== 开始部署 Sing-box Web (标准版) ===${NC}"
 
 # 0. 网络检查
 check_github() {
@@ -33,7 +34,7 @@ elif [ -f /etc/redhat-release ]; then
     yum install -y git python3 python3-pip curl tar
 fi
 
-# 2. 拉取代码 (直接拉到根目录)
+# 2. 拉取代码
 echo -e "${YELLOW}[2/6] 拉取项目...${NC}"
 CLONE_URL="$GITHUB_URL/$REPO_PATH.git"
 rm -rf "$INSTALL_DIR"
@@ -66,7 +67,6 @@ FILE_SIZE=$(stat -c%s "sing-box.tar.gz" 2>/dev/null || echo 0)
 if [ "$FILE_SIZE" -lt 1000 ]; then echo -e "${RED}核心下载失败${NC}"; rm -f sing-box.tar.gz; exit 1; fi
 
 tar -xzf sing-box.tar.gz
-# 直接移动到安装根目录
 mv sing-box-*/sing-box "$INSTALL_DIR/sing-box"
 rm -rf sing-box.tar.gz sing-box-*
 
@@ -77,13 +77,18 @@ chmod +x "$INSTALL_DIR/sb-start.sh"
 touch "$INSTALL_DIR/sing-box.log"
 chmod 666 "$INSTALL_DIR/sing-box.log"
 
-# 6. 配置服务
+# 6. 配置服务 (使用仓库自带的 service 文件)
 echo -e "${YELLOW}[6/6] 注册系统服务...${NC}"
 
-if [ -f "$INSTALL_DIR/sing-box-web.service" ]; then
-    cp "$INSTALL_DIR/sing-box-web.service" /etc/systemd/system/$SERVICE_NAME.service
+SERVICE_FILE="$INSTALL_DIR/sing-box-web.service" # 注意这里的文件名
+
+if [ -f "$SERVICE_FILE" ]; then
+    # 复制到系统目录
+    cp "$SERVICE_FILE" /etc/systemd/system/$SERVICE_NAME.service
+    echo "已安装服务文件: $SERVICE_NAME.service"
 else
-    echo -e "${RED}错误：未找到 sing-box-web.service 文件！${NC}"
+    echo -e "${RED}致命错误：未在仓库根目录找到 sing-box-web.service 文件！${NC}"
+    echo "请检查仓库结构是否正确。"
     exit 1
 fi
 
