@@ -4,10 +4,10 @@ set -euo pipefail
 # 可用环境变量覆盖：
 #   IFACE=eth0       # 出网口（默认自动探测）
 #   SERVICE=sing-box # sing-box 的 systemd 服务名
-#   CFG=/opt/sing-box-web/sing-box/sing-box_config.json  # 配置路径（仅用于提示）
+#   CFG=/opt/sing-box-web/sb/sing-box_config.json  # 配置路径（仅用于提示）
 
 SERVICE="${SERVICE:-sing-box}"
-CFG="${CFG:-/root/arm/sing-box_config.json}"
+CFG="${CFG:-/opt/sing-box-web/sb/sing-box_config.json}"
 STATE="/run/sb-guard.state"
 
 # 自动探测出网口

@@ -8,10 +8,10 @@ User=root
 Environment=SB_WEB_HOST=1270.0.01
 Environment=SB_WEB_PORT=8088
 Environment=SB_WEB_TOKEN=changeme
-Environment=SB_START=/opt-sing-box/sb-start.sh
-Environment=SB_STOP=/opt-sing-box/sb-stop.sh
+Environment=SB_START=/opt/sing-box-web/sb/sb-start.sh
+Environment=SB_STOP=/opt/sing-box-web/sb/sb-stop.sh
 Environment=SB_SERVICE=sing-box
-ExecStart=/usr/bin/python3  /opt/sb-web/app.py
+ExecStart=/usr/bin/python3  /opt/web/app.py
 Restart=always
 
 [Install]
