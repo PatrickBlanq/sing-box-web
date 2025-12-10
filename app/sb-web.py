@@ -6,7 +6,7 @@ import socket, time, re
 from flask import Flask, request, jsonify, render_template
 
 # ====== 配置（可用 systemd Environment 覆盖） ======
-HOST     = os.environ.get("SB_WEB_HOST", "127.0.0.1")
+HOST     = os.environ.get("SB_WEB_HOST", "0.0.0.0")
 PORT     = int(os.environ.get("SB_WEB_PORT", "8088"))
 TOKEN    = os.environ.get("SB_WEB_TOKEN", "changeme")
 
