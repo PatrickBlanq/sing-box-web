@@ -1,0 +1,218 @@
+{
+  "log": {
+    "level": "warning",
+    "timestamp": true,
+    "output": "stdout"
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "cn-dns",
+        "address": "udp://223.5.5.5",
+        "strategy": "ipv4_only",
+        "detour": "direct"
+      },
+      {
+        "tag": "main-dns",
+        "address": "https://dns.cloudflare.com/dns-query",
+        "strategy": "ipv4_only",
+        "detour": "main-out",
+        "address_resolver": "cn-dns",
+        "address_strategy": "ipv4_only"
+      }
+    ],
+    "rules": [
+      {
+        "type": "logical",
+        "mode": "and",
+        "rules": [
+          {
+            "rule_set": "geosite-cn"
+          },
+          {
+            "rule_set": "geoip-cn"
+          }
+        ],
+        "action": "route",
+        "server": "cn-dns",
+        "strategy": "ipv4_only"
+      },
+      {
+        "domain_suffix": [
+          "google.com",
+          "youtube.com",
+          "googlevideo.com",
+          "gvt1.com",
+          "gvt2.com"
+        ],
+        "action": "route",
+        "server": "main-dns"
+      },
+      {
+        "domain_suffix": [
+          "bilibisli.com"
+        ],
+        "action": "route",
+        "server": "cn-dns"
+      }
+    ],
+    "final": "main-dns",
+    "independent_cache": true
+  },
+  "inbounds": [
+    {
+      "type": "direct",
+      "tag": "dns-in",
+      "listen": "0.0.0.0",
+      "listen_port": 53
+    },
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "singtun0",
+      "address": [
+        "172.19.0.1/30"
+      ],
+      "stack": "system",
+      "auto_route": true,
+      "strict_route": true,
+      "endpoint_independent_nat": true,
+      "mtu": 1500,
+      "sniff": true,
+      "sniff_override_destination": true
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct",
+      "bind_interface": "eth0"
+    },
+    {
+      "type": "block",
+      "tag": "block"
+    },
+    {
+      "type": "vmess",
+      "tag": "main-out",
+      "server": "m2.u.cloudns.be",
+      "server_port": 443,
+      "uuid": "792c9cd6-9ece-4ebc-ff02-86eaf8bf7e73",
+      "security": "auto",
+      "tls": {
+        "enabled": true,
+        "server_name": "tunnel-31.5i7.dpdns.org",
+        "insecure": true,
+        "alpn": [
+          "http/1.1"
+        ],
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/792c9cd6-9ece-4ebc-ff02-86eaf8bf7e73",
+        "headers": {
+          "Host": "tunnel-31.5i7.dpdns.org"
+        },
+        "max_early_data": 0
+      },
+      "multiplex": {
+        "enabled": true,
+        "protocol": "smux",
+        "max_connections": 4,
+        "min_streams": 4,
+        "max_streams": 0
+      },
+      "domain_resolver": {
+        "server": "cn-dns",
+        "strategy": "ipv4_only"
+      },
+      "bind_interface": "eth0",
+      "domain_strategy": "ipv4_only"
+    }
+  ],
+  "route": {
+    "default_domain_resolver": {
+      "action": "resolve",
+      "server": "cn-dns",
+      "strategy": "ipv4_only"
+    },
+    "rule_set": [
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/cn.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/cn.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geosite-noncn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/geolocation-!cn.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/category-ads-all.srs",
+        "download_detour": "direct"
+      }
+    ],
+    "rules": [
+      {
+        "inbound": "dns-in",
+        "action": "hijack-dns"
+      },
+      {
+        "action": "resolve",
+        "strategy": "ipv4_only"
+      },
+      {
+        "port": 53,
+        "network": "tcp,udp",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geosite-category-ads-all",
+        "outbound": "block"
+      },
+      {
+        "rule_set": "geosite-cn",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geoip-cn",
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "ip_cidr": [
+          "10.0.0.0/8",
+          "172.16.0.0/12",
+          "192.168.0.0/16",
+          "127.0.0.0/8",
+          "100.64.0.0/10",
+          "224.0.0.0/4",
+          "240.0.0.0/4"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ],
+    "final": "main-out"
+  }
+}

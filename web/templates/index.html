@@ -1,0 +1,367 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>sing-box 控制台</title>
+    <style>
+        :root {
+            --fg: #1f2328;
+            --muted: #667085;
+            --ok: #0a0;
+            --err: #c00;
+            --bg: #fff;
+            --mono: #111
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--fg);
+            font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial
+        }
+
+        .wrap {
+            max-width: 980px;
+            margin: 28px auto;
+            padding: 0 16px
+        }
+
+        h2 {
+            margin: 0 0 16px
+        }
+
+        .row {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap
+        }
+
+        .section {
+            margin: 10px 0
+        }
+
+        .section>.title {
+            margin-bottom: 6px;
+            font-weight: bold
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            padding: 8px 10px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            width: 360px
+        }
+
+        button {
+            padding: 8px 14px;
+            border: 1px solid #d0d7de;
+            border-radius: 6px;
+            background: #f6f8fa;
+            cursor: pointer
+        }
+
+        button:hover {
+            background: #eef2f6
+        }
+
+        #active {
+            padding: 8px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f9fafb
+        }
+
+        ul {
+            margin: 6px 0;
+            padding-left: 18px
+        }
+
+        li {
+            margin: 3px 0;
+            cursor: pointer;
+            display: block
+        }
+
+        li.active {
+            background: #e6f7ff
+        }
+
+        .muted {
+            color: var(--muted)
+        }
+
+        #res {
+            min-height: 22px
+        }
+
+        #res.ok {
+            color: var(--ok)
+        }
+
+        #res.err {
+            color: var(--err)
+        }
+
+        #log {
+            white-space: pre-wrap;
+            background: var(--mono);
+            color: #eee;
+            padding: 10px;
+            border-radius: 6px;
+            min-height: 120px
+        }
+
+        .ip {
+            padding: 6px 10px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px
+        }
+
+        .metrics {
+            padding: 6px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f9fafb
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h2>sing-box 控制台</h2>
+
+        <div class="row">
+            令牌 <input id="tok" type="password" placeholder="X-Token" value="">
+            <button onclick="act('status')">状态</button>
+            <button onclick="act('start')">启用</button>
+            <button onclick="act('stop')">禁用</button>
+        </div>
+
+        <div id="active" class="row" style="justify-content:space-between">
+            <div><b>当前 main-out：</b><span id="activeText" class="muted">加载中...</span></div>
+            <div class="ip">出口 IP：<span id="exitIP" class="muted">未知</span> <button onclick="refreshIP()">刷新IP</button>
+            </div>
+        </div>
+
+        <div class="row metrics" id="metricRow">
+            <div>CPU：<span id="cpuUsage" class="muted">-</span></div>
+            <div>温度：<span id="tempC" class="muted">-</span></div>
+            <div>下行：<span id="rxSpeed" class="muted">-</span></div>
+            <div>上行：<span id="txSpeed" class="muted">-</span></div>
+        </div>
+
+        <hr />
+
+        <h3>订阅 → 获取节点</h3>
+        <div class="row">
+            订阅URL <input id="sub" type="text" placeholder="https://example.com/sub">
+            <button onclick="fetchSub()">获取/刷新</button>
+        </div>
+
+        <div class="section">
+            <div class="title">节点列表（点击一行应用并高亮）：</div>
+            <ul id="nodes"></ul>
+        </div>
+
+        <div id="res"></div>
+        <h3>输出</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const DEFAULT_TOKEN = "changeme";
+
+        /* 工具 */
+        function setMsg(ok, msg, stdout, stderr) {
+            const r = document.getElementById('res'), l = document.getElementById('log');
+            r.className = ok ? 'ok' : 'err';
+            r.textContent = (ok ? '成功：' : '失败：') + (msg || '');
+            l.textContent = (stdout || '') + "\n" + (stderr || '');
+        }
+        function getParam(name) {
+            const m = location.search.substring(1).split('&').map(x => x.split('=')).find(kv => kv[0] === name);
+            return m ? decodeURIComponent(m[1] || '') : '';
+        }
+        function getToken() {
+            const t = document.getElementById('tok').value.trim();
+            return t || localStorage.getItem('sb_token') || getParam('token') || DEFAULT_TOKEN || '';
+        }
+        function hdr() { return { 'X-Token': getToken() }; }
+        document.getElementById('tok').addEventListener('change', () => {
+            const t = getToken(); if (t) localStorage.setItem('sb_token', t);
+        });
+
+        async function act(type) {
+            const url = {
+                status: '/api/status',
+                start: '/api/start',
+                stop: '/api/stop'
+            }[type];
+            if (!url) return;
+
+            setMsg(true, '执行中...', '', '');
+            try {
+                const j = await fetch(url, { method: 'POST', headers: hdr() }).then(r => r.json());
+                setMsg(j.ok, j.msg || type, j.stdout, j.stderr);
+
+                // 启/停后刷新当前节点与出口 IP
+                if (type !== 'status') {
+                    await loadActive();
+                    await refreshIP();
+                }
+            } catch (e) {
+                setMsg(false, '请求失败: ' + e, '', '');
+            }
+        }
+
+        /* 主动刷新 active + IP */
+        async function loadActive() {
+            try {
+                const j = await fetch('/api/config/mainout', { method: 'POST', headers: hdr() }).then(r => r.json());
+                if (j.ok) {
+                    const n = j.node || {};
+                    const type = n.type || '-';
+                    const name = n.alias || n.tag || 'main-out';
+                    const host = n.ip || n.server || '-';
+                    const port = n.server_port || '-';
+                    document.getElementById('activeText').textContent = `${type} ${name} ${host}:${port}`;
+                } else {
+                    document.getElementById('activeText').textContent = '加载失败';
+                }
+            } catch (e) {
+                document.getElementById('activeText').textContent = '加载失败';
+            }
+        }
+
+        async function refreshIP() {
+            const ipSpan = document.getElementById('exitIP');
+            ipSpan.textContent = '查询中...';
+            try {
+                const r = await fetch('https://api64.ipify.org?format=json', { cache: 'no-store' });
+                const j = await r.json();
+                ipSpan.textContent = j.ip || '未知';
+            } catch (e) {
+                try {
+                    const r2 = await fetch('https://api-ipv4.ip.sb/ip', { cache: 'no-store' });
+                    const t = await r2.text();
+                    ipSpan.textContent = (t || '').trim() || '未知';
+                } catch (_) { ipSpan.textContent = '未知'; }
+            }
+        }
+
+        /* 订阅流程 */
+        async function fetchSub() {
+            const u = document.getElementById('sub').value.trim();
+            setMsg(true, '获取中...', '', '');
+            try {
+                const body = u ? { url: u } : {};
+                const j = await fetch('/api/sub/fetch', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', ...hdr() }, body: JSON.stringify(body)
+                }).then(r => r.json());
+                if (!j.ok) { setMsg(false, j.msg, j.stdout, j.stderr); return; }
+                renderNodes(j.nodes || [], j.last_tag || '');
+                setMsg(true, `解析 ${j.nodes.length} 个节点，点击应用。`, j.stdout, j.stderr);
+            } catch (e) { setMsg(false, '请求失败: ' + e, '', ''); }
+        }
+
+        function renderNodes(list, lastTag) {
+            const ul = document.getElementById('nodes'); ul.innerHTML = '';
+            list.forEach((n, idx) => {
+                const li = document.createElement('li');
+                li.textContent = `[${n.type}] ${n.tag}  ${n.server}:${n.server_port}`;
+                if (n.tag === lastTag) li.classList.add('active');
+                li.onclick = () => applyNode(idx, li, ul);
+                ul.appendChild(li);
+            });
+        }
+
+        async function applyNode(idx, li, ul) {
+            setMsg(true, `应用节点 #${idx} 中...`, '', '');
+            try {
+                const j = await fetch('/api/sub/apply', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', ...hdr() },
+                    body: JSON.stringify({ index: idx })
+                }).then(r => r.json());
+                setMsg(j.ok, j.msg, j.stdout, j.stderr);
+                if (j.ok) {
+                    [...ul.children].forEach((x) => x.classList.remove('active'));
+                    li.classList.add('active');
+                    loadActive(); refreshIP();
+                }
+            } catch (e) { setMsg(false, '请求失败: ' + e, '', ''); }
+        }
+
+        /* 指标自动刷新（每2秒） */
+        let lastRx = null, lastTx = null, lastTs = null;
+        function formatbps(bps) {
+            if (bps == null) return '-';
+            const units = ['bps', 'Kbps', 'Mbps', 'Gbps']; let i = 0;
+            while (bps >= 1000 && i < units.length - 1) { bps /= 1000; i++; }
+            return (bps >= 100 ? Math.round(bps) : Math.round(bps * 10) / 10) + ' ' + units[i];
+        }
+        async function pollMetrics() {
+            try {
+                const j = await fetch('/api/metrics', { method: 'POST', headers: hdr() }).then(r => r.json());
+                if (!j.ok) return;
+                // CPU
+                const cpu = j.cpu && j.cpu.usage != null ? (j.cpu.usage.toFixed ? j.cpu.usage.toFixed(1) : j.cpu.usage) : '-';
+                document.getElementById('cpuUsage').textContent = (cpu === '-') ? '-' : (cpu + '%');
+
+                // 温度（取第一个或平均）
+                let t = '-';
+                if (Array.isArray(j.temps) && j.temps.length) {
+                    const xs = j.temps.map(x => x.celsius).filter(v => typeof v === 'number');
+                    if (xs.length) { const avg = xs.reduce((a, b) => a + b, 0) / xs.length; t = avg.toFixed(1) + ' ℃'; }
+                }
+                document.getElementById('tempC').textContent = t;
+
+                // 网卡速率（前端算）
+                const rx = j.net && j.net.rx_bytes, tx = j.net && j.net.tx_bytes, ts = j.net && j.net.ts;
+                if (rx != null && tx != null && ts != null) {
+                    if (lastRx != null && lastTx != null && lastTs != null && ts > lastTs) {
+                        const dt = ts - lastTs;
+                        const rx_bps = (rx - lastRx) * 8 / dt;
+                        const tx_bps = (tx - lastTx) * 8 / dt;
+                        document.getElementById('rxSpeed').textContent = formatbps(rx_bps);
+                        document.getElementById('txSpeed').textContent = formatbps(tx_bps);
+                    }
+                    lastRx = rx; lastTx = tx; lastTs = ts;
+                }
+            } catch (e) {/* 忽略一次 */ }
+        }
+
+        function getTokenAndSave() {
+            const auto = getParam('token') || localStorage.getItem('sb_token') || DEFAULT_TOKEN || '';
+            if (auto) {
+                document.getElementById('tok').value = auto;
+                localStorage.setItem('sb_token', auto);
+            }
+        }
+
+        /* 初始化 */
+        window.addEventListener('DOMContentLoaded', () => {
+            getTokenAndSave();
+            // 取保存的 URL/节点/last_tag
+            fetch('/api/init', { method: 'POST', headers: hdr() })
+                .then(r => r.json()).then(j => {
+                    if (j.ok) {
+                        if (j.sub_url) document.getElementById('sub').value = j.sub_url;
+                        renderNodes(j.nodes || [], j.last_tag || '');
+                    }
+                }).catch(() => { });
+            loadActive();
+            refreshIP();
+            // 指标自动刷新
+            pollMetrics();
+            setInterval(pollMetrics, 2000);
+        });
+    </script>
+</body>
+
+</html>
