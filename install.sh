@@ -42,6 +42,7 @@ if [ ! -d "$INSTALL_DIR" ]; then echo -e "${RED}克隆失败${NC}"; exit 1; fi
 
 # 3. Python 依赖
 echo -e "${YELLOW}[3/6] 安装 Python 库...${NC}"
+pip3 install Flask requests psutil PyYAML
 pip3 install Flask requests psutil
 
 # 4. 下载核心
