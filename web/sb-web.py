@@ -10,11 +10,11 @@ HOST     = os.environ.get("SB_WEB_HOST", "127.0.0.1")
 PORT     = int(os.environ.get("SB_WEB_PORT", "8088"))
 TOKEN    = os.environ.get("SB_WEB_TOKEN", "changeme")
 
-SB_START = os.environ.get("SB_START", "/opt/sing-box-web/sing-box/sb-start.sh")
-SB_STOP  = os.environ.get("SB_STOP",  "/opt/sing-box-web/sing-box/sb-stop.sh")
+SB_START = os.environ.get("SB_START", "/opt/sing-box-web/sb/sb-start.sh")
+SB_STOP  = os.environ.get("SB_STOP",  "/opt/sing-box-web/sb/sb-stop.sh")
 SB_SVC   = os.environ.get("SB_SERVICE", "sing-box")
-SB_CFG   = os.environ.get("SB_CFG", "/opt/sing-box-web/sing-box/sing-box_config.json")
-SB_BIN   = os.environ.get("SB_BIN", "/opt/sing-box-web/sing-box/sing-box")
+SB_CFG   = os.environ.get("SB_CFG", "/opt/sing-box-web/sb/sing-box_config.json")
+SB_BIN   = os.environ.get("SB_BIN", "/opt/sing-box-web/sb/sing-box")
 
 INJECT_RESOLVER_TAG = os.environ.get("SB_RESOLVER_TAG", "cn-dns")
 INJECT_IFACE        = os.environ.get("SB_IFACE", "eth0")
@@ -26,8 +26,8 @@ MULTIPLEX_MAX_CONN = int(os.environ.get("SB_MULTIPLEX_MAX_CONN", "4"))
 MULTIPLEX_MIN_STREAMS = int(os.environ.get("SB_MULTIPLEX_MIN_STREAMS", "4"))
 MULTIPLEX_MAX_STREAMS = int(os.environ.get("SB_MULTIPLEX_MAX_STREAMS", "0"))
 
-STATE_FILE = "/etc/sing-box/sb-web-state.json"   # {"sub_url":"...","last_node_tag":"..."}
-NODES_FILE = "/etc/sing-box/sb-web-nodes.json"   # {"nodes":[ ...sing-box outbounds... ]}
+STATE_FILE = "/opt/sing-box-web/sb-web-state.json"   # {"sub_url":"...","last_node_tag":"..."}
+NODES_FILE = "/opt/sing-box-web/sb-web-nodes.json"   # {"nodes":[ ...sing-box outbounds... ]}
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
