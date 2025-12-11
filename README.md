@@ -1,6 +1,6 @@
 linux作旁路由
 
-网页操作sing-box节点
+自动下载sing-box的arm和amd64版本，网页操作sing-box节点
 
 文件安装目录：/opt/sing-box-web/
 
