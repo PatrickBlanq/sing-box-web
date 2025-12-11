@@ -61,9 +61,10 @@ fi
 # 6. 清理 Python 依赖? (可选，通常不建议)
 # 一般不建议自动卸载 pip 包，因为可能被其他程序共用。
 # 如果非要删：pip3 uninstall -y Flask requests psutil PyYAML
-#bash <(curl -Ls https://raw.githubusercontent.com/PatrickBlanq/sing-box-web/main/install.sh)
+#  bash <(curl -Ls https://raw.githubusercontent.com/PatrickBlanq/sing-box-web/main/install.sh)
 
-#bash <(curl -Ls https://raw.githubusercontent.com/PatrickBlanq/sing-box-web/main/uninstall.sh)
+#  bash <(curl -Ls https://raw.githubusercontent.com/PatrickBlanq/sing-box-web/main/uninstall.sh)
+
 
 echo -e "${GREEN}=== 卸载完成！ ===${NC}"
 echo "Sing-box Web 已从系统中彻底移除。"
