@@ -75,7 +75,6 @@ echo -e "${YELLOW}[5/6] 修正权限...${NC}"
 chmod +x "$INSTALL_DIR/sing-box"
 chmod +x "$INSTALL_DIR/sb-start.sh"
 chmod +x "$INSTALL_DIR/sb-stop.sh"
-chmod 666 "$INSTALL_DIR/sing-box.log"
 
 # 6. 配置服务 (使用仓库自带的 service 文件)
 echo -e "${YELLOW}[6/6] 注册系统服务...${NC}"
