@@ -14,6 +14,7 @@ echo -e "${YELLOW}=== 正在卸载 Sing-box Web 面板 ===${NC}"
 
 # 1. 停止并禁用服务
 echo "正在停止服务..."
+bash INSTALL_DIR/sb.stop.sh
 if systemctl is-active --quiet $SERVICE_NAME; then
     systemctl stop $SERVICE_NAME
     echo "服务已停止。"
