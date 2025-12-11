@@ -7,7 +7,7 @@ set -euo pipefail
 #   CFG=/opt/sing-box-web/sb/sing-box_config.json  # 配置路径（仅用于提示）
 
 SERVICE="${SERVICE:-sing-box}"
-CFG="${CFG:-/opt/sing-box-web/sb/sing-box_config.json}"
+CFG="${CFG:-/opt/sing-box-web/sing-box_config.json}"
 STATE="/run/sb-guard.state"
 
 # 自动探测出网口
