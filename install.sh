@@ -84,6 +84,8 @@ SERVICE_FILE="$INSTALL_DIR/sing-box-web.service" # 注意这里的文件名
 if [ -f "$SERVICE_FILE" ]; then
     # 复制到系统目录
     cp "$SERVICE_FILE" /etc/systemd/system/$SERVICE_NAME.service
+    SERVICE_FILE="$INSTALL_DIR/sing-box.service" # 注意这里的文件名
+    cp "$SERVICE_FILE" /etc/systemd/system/
     echo "已安装服务文件: $SERVICE_NAME.service"
 else
     echo -e "${RED}致命错误：未在仓库根目录找到 sing-box-web.service 文件！${NC}"
