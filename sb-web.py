@@ -36,35 +36,14 @@ def ok(msg="", **kw): d={"ok":True,"msg":msg}; d.update(kw); return jsonify(d)
 def err(msg="", **kw): d={"ok":False,"msg":msg}; d.update(kw); return jsonify(d), 400
 def authed(): return TOKEN and request.headers.get("X-Token","")==TOKEN
 
+# 获取默认网卡的辅助函数 (保持不变)
 def get_default_interface():
-    # 获取所有网卡信息
-    stats = psutil.net_if_stats()
-    # 排除 lo (回环) 和 docker 等虚拟网卡
-    # 简单粗暴的策略：找一个状态是 UP 且不是 lo 的网卡
-    # 更好的策略：查询默认路由走的网卡
-    
-    # 方案 A: 使用 psutil 简单查找
-    for interface, stat in stats.items():
-        if interface != 'lo' and stat.isup:
-            return interface
-            
-    # 方案 B (更准): 通过连接外网来确定出口网卡
-    # 这是一个比较通用的 hack 方法
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        # 根据 IP 反查网卡名
-        addrs = psutil.net_if_addrs()
-        for interface, snics in addrs.items():
-            for snic in snics:
-                if snic.address == ip:
-                    return interface
+        # 使用 ip route 获取默认路由网卡
+        cmd = "ip route show default | awk '/default/ {print $5}'"
+        return subprocess.check_output(cmd, shell=True).decode().strip()
     except:
-        pass
-        
-    return "eth0" # 实在找不到就回退到 eth0
+        return "eth0" # 保底
 
 default_iface = get_default_interface() # 获取到 ens33
 
@@ -75,6 +54,28 @@ outbound_config = {
     "bind_interface": default_iface  # <--- 这里使用变量
 }
 
+
+# 【修改】处理配置数据的函数
+def apply_interface_to_config(config_data):
+    """
+    接收配置字典，修改其中的网卡绑定，返回修改后的字典
+    """
+    iface_name = get_default_interface()
+    print(f"Detected Interface: {iface_name}")
+
+    if not config_data.get('outbounds'):
+        return config_data
+
+    for out in config_data['outbounds']:
+        # 策略 1: 所有的 'direct' 类型出站，强制绑定网卡
+        if out.get('type') == 'direct':
+            out['bind_interface'] = iface_name
+        
+        # 策略 2: 如果原本就有 bind_interface 字段 (不管写的是 eth0 还是 auto)，都修正
+        if 'bind_interface' in out:
+            out['bind_interface'] = iface_name
+            
+    return config_data
 
 def run(cmd:str, timeout=60):
     try:
