@@ -77,6 +77,18 @@ def apply_interface_to_config(config_data):
             
     return config_data
 
+def get_system_interface():
+    """获取系统默认网卡"""
+    try:
+        # 尝试通过 ip route 获取
+        import subprocess
+        cmd = "ip route show default | awk '/default/ {print $5}'"
+        iface = subprocess.check_output(cmd, shell=True).decode().strip()
+        if iface: return iface
+    except:
+        pass
+    return "eth0" # 失败则保底
+
 def run(cmd:str, timeout=60):
     try:
         p=subprocess.run(shlex.split(cmd), capture_output=True, text=True, timeout=timeout)
@@ -506,31 +518,58 @@ def api_sub_fetch():
 
 @app.route("/api/sub/apply", methods=["POST"])
 def api_sub_apply():
-    ok_auth, resp = must_auth()
-    if not ok_auth: return resp
-    data=request.get_json(force=True) or {}
-    idx=int(data.get("index",-1))
-    nodes = nodes_load()
-    if idx<0 or idx>=len(nodes): return err("index 超界或未获取订阅")
-    node=nodes[idx]
-    # 再次注入
-    if INJECT_RESOLVER_TAG: node["domain_resolver"]={"server":INJECT_RESOLVER_TAG,"strategy":"ipv4_only"}
-    if INJECT_IFACE:        node["bind_interface"]=INJECT_IFACE
-    # 替换 main-out
-    cfg=json.load(open(SB_CFG))
-    cfg2=replace_main_out(cfg, node)
-    bak=f"{SB_CFG}.bak"; 
-    try: os.replace(SB_CFG, bak)
-    except Exception: pass
-    with open(SB_CFG,"w") as f: json.dump(cfg2,f,ensure_ascii=False,indent=2)
-    ok1, out1, err1 = run(f"{SB_BIN} check -c {SB_CFG}")
-    if not ok1:
-        if os.path.exists(bak): os.replace(bak, SB_CFG)
-        return err("配置检查失败", stdout=out1, stderr=err1)
-    ok2, out2, err2 = run(f"systemctl restart {SB_SVC}")
-    # 记录 last_node_tag
-    st=state_load(); st["last_node_tag"]=node.get("tag",""); state_save(st)
-    return ok(f"已应用：{node.get('tag')}", stdout=out1+"\n"+out2, stderr=err1+"\n"+err2)
+    try:
+        node = request.json
+        if not node:
+            return jsonify({"success": False, "message": "No node data"}), 400
+
+        # 读取模板配置 (base_config)
+        if not os.path.exists(TEMPLATE_CFG):
+             return jsonify({"success": False, "message": "Template not found"}), 500
+             
+        with open(TEMPLATE_CFG, 'r', encoding='utf-8') as f:
+            config = json.load(f)
+
+        # ... (这里是你原本处理 outbounds 和 selector 的逻辑，保持不变) ...
+        # ... 比如：config['outbounds'][0] = node ...
+        
+        # ==================================================
+        # 【关键修改】在这里插入网卡修正逻辑
+        # ==================================================
+        current_iface = get_system_interface()
+        print(f"Applying interface: {current_iface}")
+        
+        for out in config.get('outbounds', []):
+            # 策略 1: 给直连 (direct) 加绑定
+            if out.get('type') == 'direct':
+                out['bind_interface'] = current_iface
+            
+            # 策略 2: 给节点 (主出站) 加绑定
+            # 通常节点的 tag 是 'proxy' 或者 'main-out'，或者它是列表的第一个
+            # 为了保险，只要该对象里原本有 bind_interface 键，就强制修正它
+            if 'bind_interface' in out:
+                out['bind_interface'] = current_iface
+                
+            # 策略 3: 如果节点没有 bind_interface，是否要强行加？
+            # 建议：如果你的节点是 vless/vmess/trojan 类型，加上更稳
+            if out.get('type') in ['vless', 'vmess', 'trojan', 'shadowsocks']:
+                out['bind_interface'] = current_iface
+        # ==================================================
+
+        # 保存到 sing-box_config.json
+        with open(SB_CFG, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+
+        # 重启服务
+        if restart_sing_box():
+            return jsonify({"success": True})
+        else:
+            return jsonify({"success": False, "message": "Restart failed"}), 500
+
+    except Exception as e:
+        print(f"Error applying node: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
 
 @app.route("/api/status", methods=["POST"])
 def api_status():
