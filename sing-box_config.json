@@ -23,21 +23,6 @@
     ],
     "rules": [
       {
-        "type": "logical",
-        "mode": "and",
-        "rules": [
-          {
-            "rule_set": "geosite-cn"
-          },
-          {
-            "rule_set": "geoip-cn"
-          }
-        ],
-        "action": "route",
-        "server": "cn-dns",
-        "strategy": "ipv4_only"
-      },
-      {
         "domain_suffix": [
           "google.com",
           "youtube.com",
@@ -93,6 +78,7 @@
       "tag": "block"
     },
     {
+      "type": "vmess",
       "tag": "main-out"
     }
   ],
@@ -108,28 +94,21 @@
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/cn.srs",
-        "download_detour": "main-out"
+        "download_detour": "direct"
       },
       {
         "tag": "geoip-cn",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/cn.srs",
-        "download_detour": "main-out"
-      },
-      {
-        "tag": "geosite-noncn",
-        "type": "remote",
-        "format": "binary",
-        "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/geolocation-!cn.srs",
-        "download_detour": "main-out"
+        "download_detour": "direct"
       },
       {
         "tag": "geosite-category-ads-all",
         "type": "remote",
         "format": "binary",
         "url": "https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/category-ads-all.srs",
-        "download_detour": "main-out"
+        "download_detour": "direct"
       }
     ],
     "rules": [
